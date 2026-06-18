@@ -1,0 +1,17 @@
+.DS_Store
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+*.log
+
+# Local Overleaf Folder Sync state/auth.
+.olfs.json
+auth.json
+
+# CodeGraph indexes are local development artifacts.
+.codegraph/
+**/.codegraph/
+
+参考项目/
