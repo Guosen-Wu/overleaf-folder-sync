@@ -103,7 +103,7 @@ olfs sync
 olfs compile
 ```
 
-`status --local` compares local files with the last saved baseline and is fast. A regular `status` contacts Overleaf and downloads the remote project archive so the CLI can detect remote changes as well.
+`status --local` compares local files with the last saved baseline and is fast. A regular `status` contacts Overleaf and downloads the remote project archive so the CLI can detect remote changes as well. `pull`, `push`, and `sync` run an additional full `status` before they change files; if one of those commands is your next step, you usually do not need to run a separate regular `status` first unless you only want to preview changes or conflicts.
 
 ## Project State
 
@@ -125,7 +125,7 @@ The authentication file is written with `0600` permissions.
 
 ## Sync Behavior
 
-`pull`, `push`, and `sync` run a full status check first. If the same file changed both locally and remotely, the CLI asks whether to:
+`pull`, `push`, and `sync` run a full status check first, so they contact Overleaf and download the remote project archive before deciding what to change. If you just ran `olfs status` as a preview, these commands still check again to avoid acting on stale state. If the same file changed both locally and remotely, the CLI asks whether to:
 
 - keep the local version
 - keep the remote version

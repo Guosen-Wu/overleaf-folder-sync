@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { parseSessionCookie } from "./auth/cookieStore.js";
-import { normalizeCliArgs } from "./cli.js";
+import { normalizeCliArgs, PROJECT_REPOSITORY } from "./cli.js";
 import { LatexLogParser } from "./compile/latexLogParser.js";
 import { OverleafClient } from "./overleaf/client.js";
 import { readMetaContent, requireMetaContent } from "./overleaf/csrf.js";
+import { currentOperationSignal, runWithOperationTimeout } from "./util/operationTimeout.js";
 
 test("parseSessionCookie accepts a raw cookie value", () => {
   assert.equal(parseSessionCookie("abc123"), "abc123");
@@ -52,6 +53,26 @@ test("normalizeCliArgs removes pnpm's command separator before subcommands", () 
   assert.deepEqual(
     normalizeCliArgs(["node", "src/cli.ts", "--", "pull", "--project-id", "p1"]),
     ["node", "src/cli.ts", "pull", "--project-id", "p1"],
+  );
+});
+
+test("PROJECT_REPOSITORY points to the GitHub project", () => {
+  assert.equal(
+    PROJECT_REPOSITORY,
+    "[Guosen-Wu/overleaf-folder-sync](https://github.com/Guosen-Wu/overleaf-folder-sync)",
+  );
+});
+
+test("runWithOperationTimeout aborts long operations", async () => {
+  await assert.rejects(
+    () => runWithOperationTimeout(async () => {
+      const signal = currentOperationSignal();
+      assert.ok(signal);
+      await new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      });
+    }, 5),
+    /Operation timed out after 5ms\./,
   );
 });
 

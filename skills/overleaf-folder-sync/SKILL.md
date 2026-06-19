@@ -65,15 +65,19 @@ olfs bind --project-id <project-id> --path <folder>
 
 After binding, explain that project state lives under `.olfs/`.
 
-### Pull From Overleaf
+### Check Status
 
-Before pulling, run:
+Use this when the user wants to preview local/remote differences without changing files:
 
 ```bash
 olfs status
 ```
 
-Then run:
+`olfs pull`, `olfs push`, and `olfs sync` each run a fresh full status check internally before changing files. Avoid running a separate `olfs status` immediately before those commands unless the user specifically wants a preview, because it will usually duplicate the same remote check.
+
+### Pull From Overleaf
+
+`olfs pull` runs a full status check before changing local files, so a separate `olfs status` is not needed unless the user specifically wants to preview changes first.
 
 ```bash
 olfs pull
@@ -89,13 +93,7 @@ Only use `olfs pull --force` after explicit user confirmation because it mirrors
 
 ### Push To Overleaf
 
-Before pushing, run:
-
-```bash
-olfs status
-```
-
-Then run:
+`olfs push` runs a full status check before changing the remote project, so a separate `olfs status` is not needed unless the user specifically wants to preview changes first.
 
 ```bash
 olfs push
@@ -105,13 +103,11 @@ Only use `olfs push --force` after explicit user confirmation because it mirrors
 
 ### Sync Both Sides
 
-Use this when the user wants the CLI's combined sync behavior:
+Use this when the user wants the CLI's combined sync behavior. `olfs sync` runs a full status check before changing either side, so a separate `olfs status` is not needed unless the user specifically wants to preview changes first.
 
 ```bash
 olfs sync
 ```
-
-Run `olfs status` first unless the user has just shown a fresh status result.
 
 ### Compile And Fetch Outputs
 
@@ -142,7 +138,7 @@ Confirm compile setting changes with the user when the correct compiler or root 
 
 - Treat `.olfs/` and the authentication file as local state, not source material for commits.
 - Do not commit cookies, `auth.json`, or copied terminal output containing secrets.
-- Prefer `olfs status --local` for a fast local-only check, but use `olfs status` before pull, push, or sync.
+- Prefer `olfs status --local` for a fast local-only preview. Use regular `olfs status` when the user asks to inspect remote differences, but do not run it automatically right before `pull`, `push`, or `sync` because those commands run their own full status check.
 - Ask before running any force command.
 - Ask before resolving a real conflict unless the user has already stated the resolution policy.
 - When command output includes project ids, filenames, compile errors, or conflict summaries, relay the relevant parts back to the user.

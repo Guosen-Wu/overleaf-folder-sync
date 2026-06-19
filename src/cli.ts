@@ -17,6 +17,7 @@ import { planPush, pushLocalChanges, type PushPlan, type PushResult } from "./sy
 import { scanLocalFiles } from "./sync/scanner.js";
 import { diffLocalAgainstZip } from "./sync/diff.js";
 import { OlfsError } from "./util/errors.js";
+import { runWithOperationTimeout } from "./util/operationTimeout.js";
 
 const color = {
   green: (text: string) => `\x1b[32m${text}\x1b[0m`,
@@ -247,11 +248,19 @@ export function normalizeCliArgs(argv: string[]): string[] {
 }
 
 const program = new Command();
+export const PROJECT_REPOSITORY = "[Guosen-Wu/overleaf-folder-sync](https://github.com/Guosen-Wu/overleaf-folder-sync)";
 
 program
   .name("olfs")
   .description("Overleaf folder sync CLI")
   .version("0.1.0");
+
+program
+  .command("about")
+  .description("Show project information")
+  .action(() => {
+    console.log(PROJECT_REPOSITORY);
+  });
 
 const auth = program.command("auth").description("Manage Overleaf authentication");
 
@@ -735,7 +744,7 @@ program.exitOverride();
 
 export async function runCli(argv = process.argv): Promise<void> {
   try {
-    await program.parseAsync(normalizeCliArgs(argv));
+    await runWithOperationTimeout(() => program.parseAsync(normalizeCliArgs(argv)));
   } catch (error) {
     if (error instanceof OlfsError) {
       console.error(`Error: ${error.message}`);
@@ -762,4 +771,7 @@ function isDirectRun(): boolean {
 
 if (isDirectRun()) {
   await runCli();
+  if (process.exitCode && process.exitCode !== 0) {
+    process.exit(process.exitCode);
+  }
 }

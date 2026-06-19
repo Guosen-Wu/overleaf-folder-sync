@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import WebSocket from "ws";
 import type { Identity, JoinedDoc, ProjectTree } from "./types.js";
 import { OlfsError } from "../util/errors.js";
+import { currentOperationSignal } from "../util/operationTimeout.js";
 
 interface TextOperation {
   p: number;
@@ -124,6 +125,7 @@ export class OverleafSocket {
         Cookie: this.identity.cookieHeader,
       },
       redirect: "manual",
+      signal: currentOperationSignal(),
     });
 
     if (!response.ok) {

@@ -17,6 +17,7 @@ import type {
 } from "./types.js";
 import { OverleafSocket } from "./socket.js";
 import { OlfsError } from "../util/errors.js";
+import { currentOperationSignal } from "../util/operationTimeout.js";
 
 export interface OverleafClientOptions {
   baseUrl?: string;
@@ -387,6 +388,7 @@ export class OverleafClient {
     const response = await fetch(url, {
       method: "GET",
       redirect: "manual",
+      signal: currentOperationSignal(),
       headers: this.shouldSendCookieForCompileOutput(url)
         ? { Cookie: this.requireIdentity().cookieHeader, Connection: "keep-alive" }
         : { Connection: "keep-alive" },
@@ -545,6 +547,7 @@ export class OverleafClient {
       ...init,
       redirect: "manual",
       headers,
+      signal: init.signal ?? currentOperationSignal(),
     });
     this.mergeSetCookie(response.headers.get("set-cookie"));
     return response;
