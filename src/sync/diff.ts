@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import AdmZip from "adm-zip";
 import type { LocalFileEntry } from "./scanner.js";
+import type { IgnoreFilter } from "./ignore.js";
 
 export interface FileDiff {
   localOnly: string[];
@@ -22,12 +23,15 @@ export async function hashFile(filePath: string): Promise<string> {
   return sha256(await fs.readFile(filePath));
 }
 
-export function zipHashes(zipPath: string): Map<string, string> {
+export function zipHashes(zipPath: string, keep: IgnoreFilter = () => true): Map<string, string> {
   const hashes = new Map<string, string>();
   const zip = new AdmZip(zipPath);
   for (const entry of zip.getEntries()) {
     if (!entry.isDirectory) {
-      hashes.set(entry.entryName.replace(/\\/g, "/"), sha256(entry.getData()));
+      const normalized = entry.entryName.replace(/\\/g, "/");
+      if (keep(normalized)) {
+        hashes.set(normalized, sha256(entry.getData()));
+      }
     }
   }
   return hashes;
@@ -41,9 +45,13 @@ export async function localHashes(localFiles: LocalFileEntry[]): Promise<Map<str
   return hashes;
 }
 
-export async function diffLocalAgainstZip(localFiles: LocalFileEntry[], zipPath: string): Promise<FileDiff> {
+export async function diffLocalAgainstZip(
+  localFiles: LocalFileEntry[],
+  zipPath: string,
+  keepRemote: IgnoreFilter = () => true,
+): Promise<FileDiff> {
   const localHashesMap = await localHashes(localFiles);
-  const remoteHashes = zipHashes(zipPath);
+  const remoteHashes = zipHashes(zipPath, keepRemote);
 
   const localOnly: string[] = [];
   const remoteOnly: string[] = [];

@@ -11,6 +11,7 @@ import { authFilePath } from "./config/paths.js";
 import { currentScriptGlob, loadLocalProjectConfig, saveLocalProjectConfig } from "./config/projectConfig.js";
 import { OverleafClient } from "./overleaf/client.js";
 import { indexProjectTree } from "./overleaf/tree.js";
+import { createIgnoreFilter } from "./sync/ignore.js";
 import { deleteLocalFiles, extractFilesFromZip, extractZipToFolder } from "./sync/apply.js";
 import { computeLocalStatus, computeSmartStatus, saveBaselineFromLocal, saveBaselineFromZip, type SmartStatus } from "./sync/baseline.js";
 import { planPush, pushLocalChanges, type PushPlan, type PushResult } from "./sync/push.js";
@@ -378,6 +379,7 @@ program
       return;
     }
 
+    const keep = await createIgnoreFilter(projectRoot);
     const status = await computeSmartStatus(projectRoot, projectId, zipPath);
     if (options.dryRun) {
       printSmartStatus(status);
@@ -397,7 +399,7 @@ program
         }
       }
 
-      const summary = await extractZipToFolder(zipPath, projectRoot);
+      const summary = await extractZipToFolder(zipPath, projectRoot, keep);
       await saveBaselineFromZip(projectRoot, projectId, zipPath);
       console.log(`Initialized from remote: pulled ${summary.written.length} files into ${projectRoot}`);
       console.log("Updated .olfs/baseline.json");
@@ -439,7 +441,7 @@ program
     const pullPaths = [...status.remoteModified, ...status.remoteAdded];
     const summary = pullPaths.length
       ? await extractFilesFromZip(zipPath, projectRoot, pullPaths)
-      : await extractZipToFolder(zipPath, projectRoot);
+      : await extractZipToFolder(zipPath, projectRoot, keep);
     const deleted = await deleteLocalFiles(projectRoot, status.remoteDeleted);
     await saveBaselineFromZip(projectRoot, projectId, zipPath);
     console.log(`Pulled ${summary.written.length} files into ${projectRoot}`);

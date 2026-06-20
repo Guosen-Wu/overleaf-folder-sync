@@ -2,7 +2,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import ignore from "ignore";
 
-export async function createIgnoreFilter(root: string): Promise<(relativePath: string) => boolean> {
+export type IgnoreFilter = (relativePath: string) => boolean;
+
+export async function createIgnoreFilter(root: string): Promise<IgnoreFilter> {
   const ig = ignore()
     .add(".DS_Store")
     .add("**/.DS_Store")
@@ -28,5 +30,8 @@ export async function createIgnoreFilter(root: string): Promise<(relativePath: s
     // Missing .olignore means all regular project files are included.
   }
 
-  return (relativePath: string) => !ig.ignores(relativePath);
+  return (relativePath: string) => {
+    const normalized = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
+    return !ig.ignores(normalized) && !ig.ignores(`${normalized}/`);
+  };
 }

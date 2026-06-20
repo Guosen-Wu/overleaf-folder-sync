@@ -4,6 +4,33 @@
   "description": "A folder-oriented Overleaf sync CLI using an overleaf_session2 cookie.",
   "license": "Apache-2.0",
   "type": "module",
+  "homepage": "https://github.com/Guosen-Wu/overleaf-folder-sync#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Guosen-Wu/overleaf-folder-sync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Guosen-Wu/overleaf-folder-sync/issues"
+  },
+  "keywords": [
+    "overleaf",
+    "latex",
+    "sync",
+    "cli"
+  ],
+  "files": [
+    "dist/auth",
+    "dist/compile",
+    "dist/config",
+    "dist/overleaf",
+    "dist/sync",
+    "dist/util",
+    "dist/cli.d.ts",
+    "dist/cli.js",
+    "README.md",
+    "EN_README.md",
+    "LICENSE"
+  ],
   "bin": {
     "olfs": "./dist/cli.js"
   },

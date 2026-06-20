@@ -7,6 +7,7 @@ import type { FolderEntity, ProjectTree } from "../overleaf/types.js";
 import { OlfsError } from "../util/errors.js";
 import { loadBaseline, type SmartStatus } from "./baseline.js";
 import { diffLocalAgainstZip, hashFile, type FileDiff } from "./diff.js";
+import { createIgnoreFilter } from "./ignore.js";
 import { scanLocalDirectories, scanLocalFiles } from "./scanner.js";
 
 export interface PushPlan {
@@ -26,9 +27,10 @@ export interface PushResult {
 }
 
 export async function planPush(client: OverleafClient, projectId: string, projectRoot: string, zipPath: string): Promise<PushPlan> {
+  const keep = await createIgnoreFilter(projectRoot);
   const localFiles = await scanLocalFiles(projectRoot);
   const localDirs = await scanLocalDirectories(projectRoot);
-  const diff = await diffLocalAgainstZip(localFiles, zipPath);
+  const diff = await diffLocalAgainstZip(localFiles, zipPath, keep);
   const projectTree = await client.projectTree(projectId);
   return makePushPlan(diff, projectTree, localDirs.map((entry) => entry.relativePath));
 }
@@ -42,9 +44,10 @@ export async function pushLocalChanges(
   onlyPaths?: string[],
   options: { deleteRemoteOnly?: boolean } = {},
 ): Promise<PushResult> {
+  const keep = await createIgnoreFilter(projectRoot);
   const localFiles = await scanLocalFiles(projectRoot);
   const localDirs = await scanLocalDirectories(projectRoot);
-  const diff = await diffLocalAgainstZip(localFiles, zipPath);
+  const diff = await diffLocalAgainstZip(localFiles, zipPath, keep);
   const projectTree = await client.projectTree(projectId);
   const remoteIndex = indexProjectTree(projectTree);
   const plan = filterPushPlan(makePushPlan(diff, projectTree, localDirs.map((entry) => entry.relativePath)), onlyPaths);

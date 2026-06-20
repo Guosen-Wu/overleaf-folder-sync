@@ -1,13 +1,18 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import AdmZip from "adm-zip";
+import type { IgnoreFilter } from "./ignore.js";
 
 export interface PullSummary {
   written: string[];
   directories: string[];
 }
 
-export async function extractZipToFolder(zipPath: string, targetRoot: string): Promise<PullSummary> {
+export async function extractZipToFolder(
+  zipPath: string,
+  targetRoot: string,
+  keep: IgnoreFilter = () => true,
+): Promise<PullSummary> {
   const zip = new AdmZip(zipPath);
   const written: string[] = [];
   const directories: string[] = [];
@@ -15,6 +20,9 @@ export async function extractZipToFolder(zipPath: string, targetRoot: string): P
   for (const entry of zip.getEntries()) {
     if (entry.isDirectory) {
       const normalizedDir = entry.entryName.replace(/\\/g, "/").replace(/\/+$/, "");
+      if (normalizedDir && !keep(normalizedDir)) {
+        continue;
+      }
       if (normalizedDir) {
         const outputDir = path.resolve(targetRoot, normalizedDir);
         const rootWithSep = `${path.resolve(targetRoot)}${path.sep}`;
@@ -28,6 +36,9 @@ export async function extractZipToFolder(zipPath: string, targetRoot: string): P
     }
 
     const normalized = entry.entryName.replace(/\\/g, "/");
+    if (!keep(normalized)) {
+      continue;
+    }
     const outputPath = path.resolve(targetRoot, normalized);
     const rootWithSep = `${path.resolve(targetRoot)}${path.sep}`;
     if (!outputPath.startsWith(rootWithSep)) {

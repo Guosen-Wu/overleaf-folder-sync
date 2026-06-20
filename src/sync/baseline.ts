@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { legacyProjectBaselinePath, projectBaselinePath } from "../config/paths.js";
 import { localHashes, zipHashes } from "./diff.js";
+import { createIgnoreFilter, type IgnoreFilter } from "./ignore.js";
 import { scanLocalFiles } from "./scanner.js";
 
 export interface SyncBaseline {
@@ -50,7 +51,8 @@ export async function loadBaseline(projectRoot: string, projectId: string): Prom
 }
 
 export async function saveBaselineFromZip(projectRoot: string, projectId: string, zipPath: string): Promise<SyncBaseline> {
-  const files = Object.fromEntries([...zipHashes(zipPath).entries()].sort(([a], [b]) => a.localeCompare(b)));
+  const keep = await createIgnoreFilter(projectRoot);
+  const files = Object.fromEntries([...zipHashes(zipPath, keep).entries()].sort(([a], [b]) => a.localeCompare(b)));
   return saveBaseline(projectRoot, {
     version: 1,
     projectId,
@@ -71,10 +73,11 @@ export async function saveBaselineFromLocal(projectRoot: string, projectId: stri
 }
 
 export async function computeSmartStatus(projectRoot: string, projectId: string, zipPath: string): Promise<SmartStatus> {
+  const keep = await createIgnoreFilter(projectRoot);
   const local = await localHashes(await scanLocalFiles(projectRoot));
-  const remote = zipHashes(zipPath);
+  const remote = zipHashes(zipPath, keep);
   const baseline = await loadBaseline(projectRoot, projectId);
-  const base = baseline?.files ?? {};
+  const base = filterFiles(baseline?.files ?? {}, keep);
   const names = new Set([...Object.keys(base), ...local.keys(), ...remote.keys()]);
 
   const status: SmartStatus = {
@@ -126,9 +129,10 @@ export async function computeSmartStatus(projectRoot: string, projectId: string,
 }
 
 export async function computeLocalStatus(projectRoot: string, projectId: string): Promise<SmartStatus> {
+  const keep = await createIgnoreFilter(projectRoot);
   const local = await localHashes(await scanLocalFiles(projectRoot));
   const baseline = await loadBaseline(projectRoot, projectId);
-  const base = baseline?.files ?? {};
+  const base = filterFiles(baseline?.files ?? {}, keep);
   const names = new Set([...Object.keys(base), ...local.keys()]);
 
   const status: SmartStatus = {
@@ -163,6 +167,10 @@ export async function computeLocalStatus(projectRoot: string, projectId: string)
   }
 
   return status;
+}
+
+function filterFiles(files: Record<string, string>, keep: IgnoreFilter): Record<string, string> {
+  return Object.fromEntries(Object.entries(files).filter(([name]) => keep(name)));
 }
 
 async function saveBaseline(projectRoot: string, baseline: SyncBaseline): Promise<SyncBaseline> {

@@ -12,41 +12,38 @@ The project is designed for researchers and writers who want to keep using local
 - Authenticate with a user-provided `overleaf_session2` cookie. The CLI does not implement web login.
 - Pull, push, and sync project files with a status check before changing either side.
 - Detect conflicts against a saved baseline and ask how to resolve files changed on both sides.
-- Respect `.gitignore` and `.olignore` to avoid syncing local temporary files, editor state, and LaTeX build outputs.
+- Respect `.gitignore` and `.olignore` as project submission filters to avoid uploading, pulling, or deleting local temporary files, editor state, and LaTeX build outputs.
 - Fetch compile logs, PDFs, and other compile artifacts from Overleaf.
 - Generate platform-specific launcher scripts for common commands.
 
 ## Installation
 
-This project is still in an early release stage. Before it is published to npm, clone the repository to a suitable local location, then build it and link the CLI into your global environment.
-
-Using `pnpm`:
+Install globally with `pnpm`:
 
 ```bash
-git clone <repo-url>
-cd P_OverleafFolderSync
-pnpm install
-pnpm build
-pnpm link --global
+pnpm add -g overleaf-folder-sync
 ```
 
-You can also use `npm`:
+You can also run it without installing:
 
 ```bash
-git clone <repo-url>
-cd P_OverleafFolderSync
-npm install
-npm run build
-npm link
+pnpm dlx overleaf-folder-sync --help
 ```
 
-After linking, the global `olfs` command becomes available:
+After installation, the global `olfs` command becomes available:
 
 ```bash
 olfs --help
 ```
 
-For development, you can also run commands directly:
+If you use `npm`:
+
+```bash
+npm install -g overleaf-folder-sync
+npx overleaf-folder-sync --help
+```
+
+For development from source, run commands directly:
 
 ```bash
 pnpm dev -- --help
@@ -134,6 +131,16 @@ The authentication file is written with `0600` permissions.
 `pull --force` mirrors the remote project into the local folder. `push --force` mirrors the local folder into the remote project. Both commands ask for runtime confirmation.
 
 On the first `pull`, if `.olfs/baseline.json` does not exist yet, the CLI initializes the local folder from the remote project. If local files already exist and could be overwritten, the CLI asks first; use `pull --yes` to skip the prompt.
+
+## Submission Filters
+
+`olfs` reads `.gitignore` and `.olignore` from the project root. These rules apply to local scanning, status checks, regular `pull`, `push`, and `sync`:
+
+- Ignored local files are not uploaded to Overleaf.
+- Ignored remote files are not treated as deletion candidates just because they are missing locally.
+- Regular `pull` and `sync` do not write ignored remote files into the local folder.
+
+Use `.olignore` for rules that should affect Overleaf sync without affecting Git.
 
 ## Compile Outputs
 

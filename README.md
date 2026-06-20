@@ -12,41 +12,38 @@
 - 使用用户提供的 `overleaf_session2` Cookie 访问 Overleaf，不实现网页登录流程。
 - 支持 `pull`、`push` 和 `sync`，并在同步前检查本地与远端变更。
 - 支持基于 baseline 的冲突检测，同一文件两端都变更时会提示选择处理方式。
-- 支持 `.gitignore` 和 `.olignore`，避免同步本地临时文件、编辑器文件和 LaTeX 构建产物。
+- 支持 `.gitignore` 和 `.olignore` 作为项目提交过滤规则，避免上传、拉取或删除本地临时文件、编辑器文件和 LaTeX 构建产物。
 - 支持从 Overleaf 获取编译日志、PDF 和其他输出文件。
 - 绑定项目时会生成平台相关的快捷脚本，方便双击执行常用命令。
 
 ## 安装
 
-当前项目仍处于早期版本。发布到 npm 之前，推荐先把项目 clone 到本地合适的位置，然后在项目目录中构建并链接到全局环境。
-
-使用 `pnpm`：
+使用 `pnpm` 全局安装：
 
 ```bash
-git clone <repo-url>
-cd P_OverleafFolderSync
-pnpm install
-pnpm build
-pnpm link --global
+pnpm add -g overleaf-folder-sync
 ```
 
-也可以使用 `npm`：
+也可以不安装，直接临时运行：
 
 ```bash
-git clone <repo-url>
-cd P_OverleafFolderSync
-npm install
-npm run build
-npm link
+pnpm dlx overleaf-folder-sync --help
 ```
 
-链接完成后，系统中会出现全局 `olfs` 命令：
+安装完成后，系统中会出现全局 `olfs` 命令：
 
 ```bash
 olfs --help
 ```
 
-开发时也可以直接使用：
+如果你使用 `npm`：
+
+```bash
+npm install -g overleaf-folder-sync
+npx overleaf-folder-sync --help
+```
+
+从源码开发时可以直接运行：
 
 ```bash
 pnpm dev -- --help
@@ -134,6 +131,16 @@ olfs compile
 `pull --force` 会以远端内容镜像本地目录。`push --force` 会以本地内容镜像远端项目。这两个命令都会在运行时再次确认。
 
 首次执行 `pull` 时，如果本地还没有 `.olfs/baseline.json`，工具会从远端初始化本地目录。如果本地已有文件且可能被覆盖，工具会先询问；可以使用 `pull --yes` 跳过交互确认。
+
+## 提交过滤
+
+`olfs` 会读取项目根目录下的 `.gitignore` 和 `.olignore`。这些规则会用于本地扫描、状态计算、普通 `pull`、`push` 和 `sync`：
+
+- 被忽略的本地文件不会上传到 Overleaf。
+- 被忽略的远端文件不会因为本地缺失而被 `push` 或 `sync` 当作删除提交。
+- 普通 `pull` 和 `sync` 不会把被忽略的远端文件写入本地。
+
+如果需要只对 Overleaf 同步生效、但不影响 Git，可以把规则写进 `.olignore`。
 
 ## 编译输出
 
