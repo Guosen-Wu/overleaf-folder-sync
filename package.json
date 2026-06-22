@@ -1,6 +1,6 @@
 {
   "name": "overleaf-folder-sync",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A folder-oriented Overleaf sync CLI using an overleaf_session2 cookie.",
   "license": "Apache-2.0",
   "type": "module",
@@ -32,7 +32,7 @@
     "LICENSE"
   ],
   "bin": {
-    "olfs": "./dist/cli.js"
+    "olfs": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
