@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { loadSessionCookie, saveCookieHeader, saveSessionCookie } from "./auth/cookieStore.js";
 import { LatexLogParser, type CompileLogEntry, type CompileLogParseResult } from "./compile/latexLogParser.js";
+import { packageVersion } from "./config/packageInfo.js";
 import { authFilePath } from "./config/paths.js";
 import { currentScriptGlob, loadLocalProjectConfig, saveLocalProjectConfig } from "./config/projectConfig.js";
 import { OverleafClient } from "./overleaf/client.js";
@@ -294,7 +295,7 @@ export const PROJECT_REPOSITORY = "[Guosen-Wu/overleaf-folder-sync](https://gith
 program
   .name("olfs")
   .description("Overleaf folder sync CLI")
-  .version("0.1.0");
+  .version(packageVersion());
 
 program
   .command("about")
