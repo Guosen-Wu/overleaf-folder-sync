@@ -95,6 +95,8 @@ Only use `olfs pull --force` after explicit user confirmation because it mirrors
 
 ### Push To Overleaf
 
+Before running `olfs push`, ask the user for explicit confirmation. Do not run `olfs push` on the agent's own initiative, even if the user has generally asked for synchronization help.
+
 `olfs push` runs a full status check before changing the remote project, so a separate `olfs status` is not needed unless the user specifically wants to preview changes first.
 
 `olfs push` skips paths ignored by `.gitignore` or `.olignore`; ignored remote files are not deleted merely because they are absent locally.
@@ -106,6 +108,8 @@ olfs push
 Only use `olfs push --force` after explicit user confirmation because it mirrors the local folder into the remote Overleaf project.
 
 ### Sync Both Sides
+
+Before running `olfs sync`, ask the user for explicit confirmation. Do not run `olfs sync` on the agent's own initiative, even if the user has generally asked for synchronization help.
 
 Use this when the user wants the CLI's combined sync behavior. `olfs sync` runs a full status check before changing either side, so a separate `olfs status` is not needed unless the user specifically wants to preview changes first.
 
@@ -144,6 +148,7 @@ Confirm compile setting changes with the user when the correct compiler or root 
 
 - Treat `.olfs/` and the authentication file as local state, not source material for commits.
 - Do not commit cookies, `auth.json`, or copied terminal output containing secrets.
+- Ask the user for explicit confirmation before running `olfs push` or `olfs sync`; never run either command on the agent's own initiative.
 - Check `.gitignore` and `.olignore` when the user asks why a file is not being pushed, pulled, or shown in status output.
 - Prefer `olfs status --local` for a fast local-only preview. Use regular `olfs status` when the user asks to inspect remote differences, but do not run it automatically right before `pull`, `push`, or `sync` because those commands run their own full status check.
 - Ask before running any force command.
