@@ -18,6 +18,7 @@ import { planPush, pushLocalChanges, type PushPlan, type PushResult } from "./sy
 import { scanLocalFiles } from "./sync/scanner.js";
 import { diffLocalAgainstZip } from "./sync/diff.js";
 import { OlfsError } from "./util/errors.js";
+import { commitProjectSnapshot, ensureGitRepository, gitMissingWarning, isGitAvailable, type GitCommitResult } from "./util/git.js";
 import { runWithOperationTimeout } from "./util/operationTimeout.js";
 
 const color = {
@@ -240,6 +241,45 @@ function hasLocalRiskForPull(status: SmartStatus): boolean {
     status.unknownChanged.length > 0;
 }
 
+function shouldWarnAboutMissingGit(argv: string[]): boolean {
+  const args = normalizeCliArgs(argv).slice(2);
+  if (args.length === 0) {
+    return false;
+  }
+  return !args.some((arg) => arg === "--help" || arg === "-h" || arg === "--version" || arg === "-V");
+}
+
+async function warnIfGitMissing(argv: string[]): Promise<void> {
+  if (shouldWarnAboutMissingGit(argv) && !await isGitAvailable()) {
+    console.error(color.yellow(`Warning: ${gitMissingWarning}`));
+  }
+}
+
+function resolvePushCommitMessage(options: { message?: string; comment?: string }): string {
+  if (options.message && options.comment && options.message !== options.comment) {
+    throw new OlfsError("Use either --message or --comment for the git commit message, not both with different values.");
+  }
+  return options.message ?? options.comment ?? "olfs push";
+}
+
+async function commitAfterPush(projectRoot: string, message: string): Promise<void> {
+  let result: GitCommitResult;
+  try {
+    result = await commitProjectSnapshot(projectRoot, message);
+  } catch (error) {
+    const detail = error instanceof Error && error.message ? ` ${error.message}` : "";
+    console.error(color.yellow(`Warning: git commit failed after successful push.${detail}`));
+    return;
+  }
+
+  if (result.committed) {
+    console.log(`Committed local snapshot ${result.commitHash ?? ""}`.trim());
+    return;
+  }
+
+  console.log(color.yellow(`Skipped git commit: ${result.skippedReason ?? "nothing to commit"}.`));
+}
+
 export function normalizeCliArgs(argv: string[]): string[] {
   const args = [...argv];
   if (args[2] === "--") {
@@ -322,7 +362,15 @@ program
   .option("--path <path>", "local folder path", ".")
   .action(async (options: { projectId: string; path: string }) => {
     const config = await saveLocalProjectConfig(options.path, options.projectId);
+    const git = await ensureGitRepository(config.path);
     console.log(`Bound ${config.path} to Overleaf project ${config.projectId}`);
+    if (git.initialized) {
+      console.log(`Initialized git repository at ${config.path}`);
+    } else if (git.alreadyRepository) {
+      console.log("Git repository already present; skipped git init.");
+    } else {
+      console.log("Skipped git repository initialization because git is not available.");
+    }
     console.log(`Created .olfs/config.json and .olfs/bin/${currentScriptGlob()}`);
   });
 
@@ -607,9 +655,12 @@ program
   .option("--path <path>", "local folder path", ".")
   .option("--dry-run", "show the push plan without writing to Overleaf")
   .option("--force", "skip status/conflict checks after confirmation and mirror local files to remote")
-  .action(async (options: { projectId?: string; path: string; dryRun?: boolean; force?: boolean }) => {
+  .option("-m, --message <message>", "git commit message after a successful push")
+  .option("--comment <comment>", "alias for --message")
+  .action(async (options: { projectId?: string; path: string; dryRun?: boolean; force?: boolean; message?: string; comment?: string }) => {
     const projectRoot = path.resolve(options.path);
     const projectId = options.projectId ?? (await loadLocalProjectConfig(projectRoot)).projectId;
+    const commitMessage = resolvePushCommitMessage(options);
     const client = await authenticatedClient();
     const zipPath = await downloadProjectZip(client, projectId);
     if (options.force) {
@@ -627,6 +678,9 @@ program
         await saveBaselineFromLocal(projectRoot, projectId);
       }
       printPushResult(result);
+      if (result.skipped.length === 0) {
+        await commitAfterPush(projectRoot, commitMessage);
+      }
       return;
     }
 
@@ -675,6 +729,9 @@ program
     if (conflictSkipped.length) {
       console.log(color.yellow(`conflict-skipped\t${conflictSkipped.length}`));
       conflictSkipped.forEach((name) => console.log(color.yellow(`  ${name}`)));
+    }
+    if (result.skipped.length === 0 && conflictSkipped.length === 0) {
+      await commitAfterPush(projectRoot, commitMessage);
     }
   });
 
@@ -746,6 +803,7 @@ program.exitOverride();
 
 export async function runCli(argv = process.argv): Promise<void> {
   try {
+    await warnIfGitMissing(argv);
     await runWithOperationTimeout(() => program.parseAsync(normalizeCliArgs(argv)));
   } catch (error) {
     if (error instanceof OlfsError) {

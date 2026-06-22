@@ -13,6 +13,7 @@ The project is designed for researchers and writers who want to keep using local
 - Pull, push, and sync project files with a status check before changing either side.
 - Detect conflicts against a saved baseline and ask how to resolve files changed on both sides.
 - Respect `.gitignore` and `.olignore` as project submission filters to avoid uploading, pulling, or deleting local temporary files, editor state, and LaTeX build outputs.
+- Check for a local Git repository when binding; if the folder is not already in a Git work tree and `git` is available, run `git init`.
 - Fetch compile logs, PDFs, and other compile artifacts from Overleaf.
 - Generate platform-specific launcher scripts for common commands.
 
@@ -95,6 +96,7 @@ olfs status --local
 olfs pull
 olfs pull --force
 olfs push
+olfs push --message "update experiment results"
 olfs push --force
 olfs sync
 olfs compile
@@ -120,6 +122,8 @@ Authentication is stored outside the project folder:
 
 The authentication file is written with `0600` permissions.
 
+During binding, `olfs` checks whether the target folder is already inside a Git repository. Existing repositories are left alone; if no repository exists and `git` is available, the CLI initializes one. If `git` is not available, the command still continues, but every `olfs` operation prints a warning that local paper changes are not protected by a Git repository.
+
 ## Sync Behavior
 
 `pull`, `push`, and `sync` run a full status check first, so they contact Overleaf and download the remote project archive before deciding what to change. If you just ran `olfs status` as a preview, these commands still check again to avoid acting on stale state. If the same file changed both locally and remotely, the CLI asks whether to:
@@ -131,6 +135,8 @@ The authentication file is written with `0600` permissions.
 `pull --force` mirrors the remote project into the local folder. `push --force` mirrors the local folder into the remote project. Both commands ask for runtime confirmation.
 
 On the first `pull`, if `.olfs/baseline.json` does not exist yet, the CLI initializes the local folder from the remote project. If local files already exist and could be overwritten, the CLI asks first; use `pull --yes` to skip the prompt.
+
+After each successful `olfs push`, the CLI runs `git add .` and creates a local Git commit. Use `--message` or `--comment` to set the commit message, for example `olfs push --comment "revise introduction"`; when omitted, the default message is `olfs push`. If there are no new Git changes, the commit is skipped automatically.
 
 ## Submission Filters
 

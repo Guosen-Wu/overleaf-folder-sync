@@ -13,6 +13,7 @@
 - 支持 `pull`、`push` 和 `sync`，并在同步前检查本地与远端变更。
 - 支持基于 baseline 的冲突检测，同一文件两端都变更时会提示选择处理方式。
 - 支持 `.gitignore` 和 `.olignore` 作为项目提交过滤规则，避免上传、拉取或删除本地临时文件、编辑器文件和 LaTeX 构建产物。
+- 绑定项目时会自动检查本地 Git 仓库；如果目录尚未处于 Git 仓库中且本机可用 `git`，会执行 `git init`。
 - 支持从 Overleaf 获取编译日志、PDF 和其他输出文件。
 - 绑定项目时会生成平台相关的快捷脚本，方便双击执行常用命令。
 
@@ -95,6 +96,7 @@ olfs status --local
 olfs pull
 olfs pull --force
 olfs push
+olfs push --message "update experiment results"
 olfs push --force
 olfs sync
 olfs compile
@@ -120,6 +122,8 @@ olfs compile
 
 该认证文件会使用 `0600` 权限保存。
 
+绑定时，`olfs` 会检查目标目录是否已经处于 Git 仓库中。如果已有仓库，会跳过初始化；如果没有仓库且本机安装了 `git`，会自动创建一个仓库。如果本机没有可用的 `git`，命令仍会继续执行，但每次运行 `olfs` 操作命令时都会显示警告，提醒本地论文变更没有 Git 仓库保护。
+
 ## 同步行为
 
 `pull`、`push` 和 `sync` 会先执行完整状态检查，因此它们会连接 Overleaf 并下载远端项目压缩包后再决定如何处理。如果你刚刚只是为了预览执行过 `olfs status`，再运行这些命令时还会重新检查一次，以避免基于过期状态修改本地或远端文件。如果同一个文件在本地和远端都发生了变化，工具会提示选择：
@@ -131,6 +135,8 @@ olfs compile
 `pull --force` 会以远端内容镜像本地目录。`push --force` 会以本地内容镜像远端项目。这两个命令都会在运行时再次确认。
 
 首次执行 `pull` 时，如果本地还没有 `.olfs/baseline.json`，工具会从远端初始化本地目录。如果本地已有文件且可能被覆盖，工具会先询问；可以使用 `pull --yes` 跳过交互确认。
+
+每次 `olfs push` 成功完成后，工具会在本地执行 `git add .` 并创建一次 Git commit。可以用 `--message` 或 `--comment` 指定提交信息，例如 `olfs push --comment "revise introduction"`；如果没有指定，默认提交信息是 `olfs push`。如果没有新的 Git 变更，commit 会自动跳过。
 
 ## 提交过滤
 

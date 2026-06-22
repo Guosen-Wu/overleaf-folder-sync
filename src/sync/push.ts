@@ -51,8 +51,6 @@ export async function pushLocalChanges(
   const projectTree = await client.projectTree(projectId);
   const remoteIndex = indexProjectTree(projectTree);
   const plan = filterPushPlan(makePushPlan(diff, projectTree, localDirs.map((entry) => entry.relativePath)), onlyPaths);
-  const identity = await client.refreshIdentity();
-  const socket = new OverleafSocket(client.baseURL, identity, projectId);
   const uploaded: string[] = [];
   const moved: string[] = [];
   const deleted: string[] = [];
@@ -60,6 +58,21 @@ export async function pushLocalChanges(
   const movedPairs = await detectMovedFiles(projectRoot, projectId, diff.localOnly, status?.localDeleted ?? diff.remoteOnly);
   const movedLocalPaths = new Set(movedPairs.map((pair) => pair.to));
   const movedRemotePaths = new Set(movedPairs.map((pair) => pair.from));
+  const deleteCandidates = options.deleteRemoteOnly ? plan.remoteOnly : (status?.localDeleted ?? []);
+
+  if (
+    plan.localDirs.length === 0 &&
+    plan.changedDocs.length === 0 &&
+    plan.changedFiles.length === 0 &&
+    plan.localOnly.length === 0 &&
+    deleteCandidates.length === 0 &&
+    movedPairs.length === 0
+  ) {
+    return { uploaded, moved, deleted, skipped };
+  }
+
+  const identity = await client.refreshIdentity();
+  const socket = new OverleafSocket(client.baseURL, identity, projectId);
 
   for (const dir of plan.localDirs) {
     await ensureRemoteFolderPath(client, projectId, projectTree, dir);
@@ -142,7 +155,6 @@ export async function pushLocalChanges(
     socket.disconnect();
   }
 
-  const deleteCandidates = options.deleteRemoteOnly ? plan.remoteOnly : (status?.localDeleted ?? []);
   for (const relativePath of deleteCandidates) {
     if (movedRemotePaths.has(relativePath)) {
       continue;
