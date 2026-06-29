@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -75,11 +76,12 @@ async function writeProjectScripts(projectRoot: string): Promise<void> {
   const binDir = projectBinDir(projectRoot);
   await fs.mkdir(binDir, { recursive: true });
   await removeOtherPlatformScripts(binDir);
+  const olfsCommand = resolveOlfsCommand();
 
   for (const script of projectScripts()) {
     const name = `${script.name}${scriptExtension()}`;
     const filePath = path.join(binDir, name);
-    const contents = renderProjectScript(projectRoot, script.command);
+    const contents = renderProjectScript(projectRoot, script.command, process.platform, olfsCommand);
     await fs.writeFile(filePath, contents, { mode: 0o755 });
     await fs.chmod(filePath, 0o755);
   }
@@ -91,14 +93,14 @@ export function currentScriptGlob(): string {
 
 function projectScripts(): Array<{ name: string; command: string }> {
   return [
-    { name: "olfs-status", command: "olfs status --path \"$PROJECT_ROOT\"" },
-    { name: "olfs-status-local", command: "olfs status --local --path \"$PROJECT_ROOT\"" },
-    { name: "olfs-compile", command: "olfs compile --path \"$PROJECT_ROOT\"" },
-    { name: "olfs-pull", command: "olfs pull --yes --path \"$PROJECT_ROOT\"" },
-    { name: "olfs-pull-force", command: "olfs pull --force --path \"$PROJECT_ROOT\"" },
-    { name: "olfs-push", command: "olfs push --path \"$PROJECT_ROOT\"" },
-    { name: "olfs-push-force", command: "olfs push --force --path \"$PROJECT_ROOT\"" },
-    { name: "olfs-sync", command: "olfs sync --path \"$PROJECT_ROOT\"" },
+    { name: "olfs-status", command: "status --path \"$PROJECT_ROOT\"" },
+    { name: "olfs-status-local", command: "status --local --path \"$PROJECT_ROOT\"" },
+    { name: "olfs-compile", command: "compile --path \"$PROJECT_ROOT\"" },
+    { name: "olfs-pull", command: "pull --yes --path \"$PROJECT_ROOT\"" },
+    { name: "olfs-pull-force", command: "pull --force --path \"$PROJECT_ROOT\"" },
+    { name: "olfs-push", command: "push --path \"$PROJECT_ROOT\"" },
+    { name: "olfs-push-force", command: "push --force --path \"$PROJECT_ROOT\"" },
+    { name: "olfs-sync", command: "sync --path \"$PROJECT_ROOT\"" },
   ];
 }
 
@@ -112,10 +114,16 @@ function scriptExtension(platform: NodeJS.Platform = process.platform): ".cmd" |
   return ".sh";
 }
 
-export function renderProjectScript(projectRoot: string, command: string, platform: NodeJS.Platform = process.platform): string {
+export function renderProjectScript(
+  projectRoot: string,
+  command: string,
+  platform: NodeJS.Platform = process.platform,
+  olfsCommand = resolveOlfsCommand(),
+): string {
+  const resolvedCommand = `${formatLauncher(olfsCommand, platform)} ${command}`;
   if (platform === "win32") {
     const windowsRoot = projectRoot.replace(/\//g, "\\");
-    const windowsCommand = command.replace(/\$PROJECT_ROOT/g, "%PROJECT_ROOT%");
+    const windowsCommand = resolvedCommand.replace(/\$PROJECT_ROOT/g, "%PROJECT_ROOT%");
     return [
       "@echo off",
       "setlocal",
@@ -143,7 +151,7 @@ export function renderProjectScript(projectRoot: string, command: string, platfo
     "echo \"Overleaf Folder Sync\"",
     "echo \"Project: $PROJECT_ROOT\"",
     "echo",
-    command,
+    resolvedCommand,
     "STATUS=$?",
     "echo",
     "echo \"Exit code: $STATUS\"",
@@ -155,6 +163,32 @@ export function renderProjectScript(projectRoot: string, command: string, platfo
     "exit $STATUS",
     "",
   ].join("\n");
+}
+
+function resolveOlfsCommand(): string {
+  const envCommand = process.env.OLFS_COMMAND?.trim();
+  if (envCommand) {
+    return envCommand;
+  }
+
+  try {
+    const resolver = process.platform === "win32" ? "where" : "which";
+    const output = execFileSync(resolver, ["olfs"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    if (output) {
+      return output.split(/\r?\n/)[0].trim();
+    }
+  } catch {
+    // Fall back to the command name when the installed binary cannot be resolved.
+  }
+
+  return "olfs";
+}
+
+function formatLauncher(command: string, platform: NodeJS.Platform): string {
+  if (platform === "win32") {
+    return `"${command.replace(/\//g, "\\")}"`;
+  }
+  return shellQuote(command);
 }
 
 async function removeOtherPlatformScripts(binDir: string): Promise<void> {

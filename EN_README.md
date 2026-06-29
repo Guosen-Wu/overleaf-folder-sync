@@ -167,7 +167,7 @@ olfs compile --set-root main.tex
 
 ## Platform Scripts
 
-`olfs bind` creates launcher scripts under `.olfs/bin/` for the current platform:
+`olfs bind` creates launcher scripts under `.olfs/bin/` for the current platform, and they call the installed `olfs` binary:
 
 - macOS: `.command`
 - Linux: `.sh`

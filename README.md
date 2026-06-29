@@ -167,7 +167,7 @@ olfs compile --set-root main.tex
 
 ## 平台快捷脚本
 
-`olfs bind` 会在 `.olfs/bin/` 下生成当前平台可用的快捷脚本：
+`olfs bind` 会在 `.olfs/bin/` 下生成当前平台可用的快捷脚本，它们会调用你已安装的 `olfs`：
 
 - macOS: `.command`
 - Linux: `.sh`
