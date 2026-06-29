@@ -102,18 +102,18 @@ function projectScripts(): Array<{ name: string; command: string }> {
   ];
 }
 
-function scriptExtension(): ".cmd" | ".command" | ".sh" {
-  if (process.platform === "win32") {
+function scriptExtension(platform: NodeJS.Platform = process.platform): ".cmd" | ".command" | ".sh" {
+  if (platform === "win32") {
     return ".cmd";
   }
-  if (process.platform === "darwin") {
+  if (platform === "darwin") {
     return ".command";
   }
   return ".sh";
 }
 
-function renderProjectScript(projectRoot: string, command: string): string {
-  if (process.platform === "win32") {
+export function renderProjectScript(projectRoot: string, command: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform === "win32") {
     const windowsRoot = projectRoot.replace(/\//g, "\\");
     const windowsCommand = command.replace(/\$PROJECT_ROOT/g, "%PROJECT_ROOT%");
     return [
@@ -134,7 +134,7 @@ function renderProjectScript(projectRoot: string, command: string): string {
     ].join("\r\n");
   }
 
-  const shell = process.platform === "darwin" ? "/bin/zsh" : "/usr/bin/env bash";
+  const shell = platform === "darwin" ? "/bin/zsh" : "/usr/bin/env bash";
   return [
     `#!${shell}`,
     "export PATH=\"$HOME/Library/pnpm:/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH\"",
@@ -147,8 +147,11 @@ function renderProjectScript(projectRoot: string, command: string): string {
     "STATUS=$?",
     "echo",
     "echo \"Exit code: $STATUS\"",
-    process.platform === "darwin" ? "echo \"Press Enter to close...\"" : "echo \"Press Enter to close...\"",
+    "echo \"Press Enter to close...\"",
     "read",
+    platform === "darwin"
+      ? "if [ \"${TERM_PROGRAM:-}\" = \"Apple_Terminal\" ]; then (sleep 0.2; osascript -e 'tell application \"Terminal\" to close front window') >/dev/null 2>&1 & disown; fi"
+      : "",
     "exit $STATUS",
     "",
   ].join("\n");
