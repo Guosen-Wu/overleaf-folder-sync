@@ -264,12 +264,24 @@ function resolvePushCommitMessage(options: { message?: string; comment?: string 
 }
 
 async function commitAfterPush(projectRoot: string, message: string): Promise<void> {
+  await commitAfterGitOperation(projectRoot, "push", message);
+}
+
+async function commitAfterPull(projectRoot: string): Promise<void> {
+  await commitAfterGitOperation(projectRoot, "pull", "olfs pull");
+}
+
+async function commitAfterSync(projectRoot: string): Promise<void> {
+  await commitAfterGitOperation(projectRoot, "sync", "olfs sync");
+}
+
+async function commitAfterGitOperation(projectRoot: string, operation: "pull" | "push" | "sync", message: string): Promise<void> {
   let result: GitCommitResult;
   try {
     result = await commitProjectSnapshot(projectRoot, message);
   } catch (error) {
     const detail = error instanceof Error && error.message ? ` ${error.message}` : "";
-    console.error(color.yellow(`Warning: git commit failed after successful push.${detail}`));
+    console.error(color.yellow(`Warning: git commit failed after successful ${operation}.${detail}`));
     return;
   }
 
@@ -425,6 +437,7 @@ program
         console.log(`Deleted ${deleted.length} local file(s) not present on remote.`);
       }
       console.log("Updated .olfs/baseline.json");
+      await commitAfterPull(projectRoot);
       return;
     }
 
@@ -452,6 +465,7 @@ program
       await saveBaselineFromZip(projectRoot, projectId, zipPath);
       console.log(`Initialized from remote: pulled ${summary.written.length} files into ${projectRoot}`);
       console.log("Updated .olfs/baseline.json");
+      await commitAfterPull(projectRoot);
       return;
     }
 
@@ -484,6 +498,7 @@ program
         console.log(`Deleted ${deleted.length} local file(s) removed on remote.`);
       }
       console.log("Updated .olfs/baseline.json");
+      await commitAfterPull(projectRoot);
       return;
     }
 
@@ -498,6 +513,7 @@ program
       console.log(`Deleted ${deleted.length} local file(s) removed on remote.`);
     }
     console.log("Updated .olfs/baseline.json");
+    await commitAfterPull(projectRoot);
   });
 
 program
@@ -794,9 +810,12 @@ program
       console.log(color.yellow(`conflict-skipped\t${conflictSkipped.length}`));
       conflictSkipped.forEach((name) => console.log(color.yellow(`  ${name}`)));
     }
-    if (result.skipped.length === 0) {
+    if (result.skipped.length === 0 && conflictSkipped.length === 0) {
       await saveBaselineFromLocal(projectRoot, projectId);
       console.log("Updated .olfs/baseline.json");
+    }
+    if (result.skipped.length === 0 && conflictSkipped.length === 0) {
+      await commitAfterSync(projectRoot);
     }
   });
 

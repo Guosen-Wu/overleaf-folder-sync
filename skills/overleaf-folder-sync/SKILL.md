@@ -91,6 +91,8 @@ If the user asks for a first-time initialization and wants fewer prompts:
 olfs pull --yes
 ```
 
+After a successful `olfs pull` or `olfs sync`, the CLI also creates a local Git commit with the message `olfs pull` or `olfs sync` when Git is available and there are staged changes.
+
 Only use `olfs pull --force` after explicit user confirmation because it mirrors the remote project into the local folder.
 
 ### Push To Overleaf

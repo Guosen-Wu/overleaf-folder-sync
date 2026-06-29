@@ -89,3 +89,42 @@ test("commitProjectSnapshot skips when there are no staged changes", { skip: !aw
     skippedReason: "no staged changes",
   });
 });
+
+test("commitProjectSnapshot uses a pull commit message", { skip: !await isGitAvailable() }, async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "olfs-git-pull-"));
+
+  await ensureGitRepository(root);
+  await fs.writeFile(path.join(root, "main.tex"), "hello from pull\n", "utf8");
+
+  const result = await commitProjectSnapshot(root, "olfs pull");
+
+  assert.equal(result.committed, true);
+  assert.equal(await git(root, ["log", "-1", "--pretty=%s"]), "olfs pull");
+});
+
+test("commitProjectSnapshot uses a sync commit message", { skip: !await isGitAvailable() }, async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "olfs-git-sync-"));
+
+  await ensureGitRepository(root);
+  await fs.writeFile(path.join(root, "main.tex"), "hello from sync\n", "utf8");
+
+  const result = await commitProjectSnapshot(root, "olfs sync");
+
+  assert.equal(result.committed, true);
+  assert.equal(await git(root, ["log", "-1", "--pretty=%s"]), "olfs sync");
+});
+
+test("commitProjectSnapshot skips when sync would not have changes to commit", { skip: !await isGitAvailable() }, async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "olfs-git-sync-empty-"));
+
+  await ensureGitRepository(root);
+
+  const result = await commitProjectSnapshot(root, "olfs sync");
+
+  assert.deepEqual(result, {
+    gitAvailable: true,
+    repositoryAvailable: true,
+    committed: false,
+    skippedReason: "no staged changes",
+  });
+});

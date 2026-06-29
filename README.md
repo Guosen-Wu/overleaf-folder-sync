@@ -136,7 +136,7 @@ olfs compile
 
 首次执行 `pull` 时，如果本地还没有 `.olfs/baseline.json`，工具会从远端初始化本地目录。如果本地已有文件且可能被覆盖，工具会先询问；可以使用 `pull --yes` 跳过交互确认。
 
-每次 `olfs push` 成功完成后，工具会在本地执行 `git add .` 并创建一次 Git commit。可以用 `--message` 或 `--comment` 指定提交信息，例如 `olfs push --comment "revise introduction"`；如果没有指定，默认提交信息是 `olfs push`。如果没有新的 Git 变更，commit 会自动跳过。
+每次 `olfs pull`、`olfs push` 或 `olfs sync` 成功完成后，工具都会在本地执行 `git add .` 并创建一次 Git commit。`pull` 使用默认提交信息 `olfs pull`；`sync` 使用默认提交信息 `olfs sync`；`push` 可以用 `--message` 或 `--comment` 指定提交信息，例如 `olfs push --comment "revise introduction"`，如果没有指定，默认提交信息是 `olfs push`。如果没有新的 Git 变更，commit 会自动跳过。
 
 ## 提交过滤
 

@@ -136,7 +136,7 @@ During binding, `olfs` checks whether the target folder is already inside a Git 
 
 On the first `pull`, if `.olfs/baseline.json` does not exist yet, the CLI initializes the local folder from the remote project. If local files already exist and could be overwritten, the CLI asks first; use `pull --yes` to skip the prompt.
 
-After each successful `olfs push`, the CLI runs `git add .` and creates a local Git commit. Use `--message` or `--comment` to set the commit message, for example `olfs push --comment "revise introduction"`; when omitted, the default message is `olfs push`. If there are no new Git changes, the commit is skipped automatically.
+After each successful `olfs pull`, `olfs push`, or `olfs sync`, the CLI runs `git add .` and creates a local Git commit. `pull` uses the default commit message `olfs pull`; `sync` uses `olfs sync`; `push` uses `--message` or `--comment` when provided, otherwise the default message is `olfs push`. If there are no new Git changes, the commit is skipped automatically.
 
 ## Submission Filters
 
